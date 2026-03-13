@@ -23,7 +23,7 @@ resource "terraform_data" "mongodb" {
     host = aws_instance.mongodb.private_ip
   }
   provisioner "file" {
-    source = bootstrap.sh #local file path
+    source = "bootstrap.sh" #local file path
     destination = "/tmp/bootstrap.sh"
   }
   provisioner "remote-exec" {
@@ -58,7 +58,7 @@ resource "terraform_data" "bootstrap_redis" {
     host = aws_instance.redis.private_ip
   }
   provisioner "file" {
-    source = bootstrap.sh
+    source = "bootstrap.sh"
     destination = "/tmp/bootstrap.sh"
   }
   provisioner "remote-exec" {
