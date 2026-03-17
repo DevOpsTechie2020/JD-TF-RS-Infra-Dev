@@ -43,7 +43,7 @@ resource "aws_ec2_instance_state" "catalogue" {
 }
 
 resource "aws_ami_from_instance" "catalogue" {
-  # roboshop-dev-catalogue-v3-i-h468sghy
+  # roboshop-dev-catalogue-v3-instanceid
   name               = "${var.project}-${var.environment}-catalogue-${var.app_version}-${aws_instance.catalogue.id}"
   source_instance_id = aws_instance.catalogue.id
   depends_on = [aws_ec2_instance_state.catalogue]
@@ -71,5 +71,94 @@ resource "aws_lb_target_group" "catalogue" {
     protocol = "HTTP"
     timeout = 2
     unhealthy_threshold = 3
+  }
+}
+
+resource "aws_launch_template" "catalogue" {
+  name = "${var.project}-${var.environment}-catalogue"
+  image_id = aws_ami_from_instance.catalogue.id
+
+  # once autoscaling sees less traffic, it will terminate the instance
+  instance_initiated_shutdown_behavior = "terminate"
+  instance_type = "t3.micro"
+  vpc_security_group_ids = [local.catalogue_sg_id]
+
+  # each time we apply terraform this version will be updated as default
+  update_default_version = true
+  
+  # tags for instances created by launch template through autoscaling
+  tag_specifications {
+    resource_type = "instance"
+
+    tags = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+  }
+  # tags for volumes created by instances
+  tag_specifications {
+    resource_type = "volume"
+
+    tags = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+  }
+  # tags for launch template
+  tags = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+}
+
+resource "aws_autoscaling_group" "catalogue" {
+  name                      = "${var.project}-${var.environment}-catalogue"
+  max_size                  = 10
+  min_size                  = 1
+  health_check_grace_period = 120
+  health_check_type         = "ELB"
+  desired_capacity          = 1
+  force_delete              = false
+
+  launch_template {
+    id      = aws_launch_template.catalogue.id
+    version = "$Latest"
+  }
+
+  
+  vpc_zone_identifier       = [local.private_subnet_id]
+  target_group_arns = [aws_lb_target_group.catalogue.arn]
+
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+    triggers = ["launch_template"]
+  }
+
+  dynamic "tag" {
+    for_each = merge(
+        {
+            Name = "${var.project}-${var.environment}-catalogue"
+        },
+        local.common_tags
+    )
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+  }
+
+  # with in 15min autoscaling should be successful
+  timeouts {
+    delete = "15m"
   }
 }
