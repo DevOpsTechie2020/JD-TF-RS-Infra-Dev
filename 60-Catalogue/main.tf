@@ -43,7 +43,7 @@ resource "aws_ec2_instance_state" "catalogue" {
 }
 
 resource "aws_ami_from_instance" "catalogue" {
-  # roboshop-dev-catalogue-v3-instanceid
+  # roboshop-dev-catalogue-v3-instance-id
   name               = "${var.project}-${var.environment}-catalogue-${var.app_version}-${aws_instance.catalogue.id}"
   source_instance_id = aws_instance.catalogue.id
   depends_on = [aws_ec2_instance_state.catalogue]
@@ -86,7 +86,7 @@ resource "aws_launch_template" "catalogue" {
   # each time we apply terraform this version will be updated as default
   update_default_version = true
   
-  # tags for instances created by launch template through autoscaling
+  # tags for instances created by launch template through autoscaling group
   tag_specifications {
     resource_type = "instance"
 
