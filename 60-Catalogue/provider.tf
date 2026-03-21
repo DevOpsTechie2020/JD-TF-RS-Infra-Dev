@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket  = "bokkrama88s-dev" # Replace with your unique bucket name
+    bucket  = "bokkrama88s-dev" # Replace with your unique bucket name in s3
     key     = "roboshop-dev-catalogue"
     region  = "us-east-1"
     encrypt = true
